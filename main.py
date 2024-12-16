@@ -2,6 +2,7 @@ import cv2
 import streamlit as st
 from gtts import gTTS
 from tempfile import NamedTemporaryFile
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 
 # Page configuration
 st.set_page_config(page_title="Midori Eco", layout="wide", page_icon="♻️")
@@ -10,7 +11,7 @@ st.set_page_config(page_title="Midori Eco", layout="wide", page_icon="♻️")
 BIN_GUIDE = {
     "book": "Blue recycling bin",
     "bottle": "Red recycling bin",
-    "chair": "Black recycling bin",
+    "chair": "Black recycle bin",
     "pottedplant": "Pink recycling bin",
     "tvmonitor": "Purple recycle bin"
 }
@@ -25,7 +26,6 @@ def load_model():
 model = load_model()
 
 # Class labels for the MobileNet SSD model
-
 CLASS_LABELS = {
     5: "bottle",
     9: "chair",
@@ -47,48 +47,19 @@ def detect_objects(frame, model):
     detections = model.forward()
     return detections
 
-def main():
-    st.title("♻️ Midori Eco: Your Recycling Assistant")
-    st.write(
-        "Hello, I am **Midori Eco**, your smart assistant for recycling. "
-        "Hold an item in front of the webcam and press **'Detect Object'** to find out which bin it goes in."
-    )
-    st.sidebar.header("User Guide")
-    st.sidebar.write(
-        "- **Start the webcam** to enable live detection.\n"
-        "- Click **'Detect Object'** to check an item's category.\n"
-        "- Press **'Stop Webcam'** when you're done."
-    )
+class VideoTransformer(VideoTransformerBase):
+    def __init__(self):
+        self.model = model
 
-    # Start webcam feed
-    video = cv2.VideoCapture(0)
-    video.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    video.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")
 
-    if not video.isOpened():
-        st.error("Error: Could not access the webcam.")
-        return
+        # Detect objects
+        detections = detect_objects(img, self.model)
 
-    frame_placeholder = st.empty()  # Placeholder for displaying video frames
-    detected_objects_placeholder = st.empty()
-    # Placeholder for displaying detected objects
-    start = st.button("Start Webcam")
-    stop = st.button("Stop Webcam")  # Stop button
-    detect = st.button("Detect Object")  # Button to detect the next object
-
-    detected_labels = set()  # Keep track of already detected objects to avoid repeated audio
-
-    while not stop:
-        ret, frame = video.read()
-
-        if not ret:
-            st.error("Error: Failed to capture frame.")
-            break
-
-        # Detect objects and draw green boxes
-        detections = detect_objects(frame, model)
+        h, w = img.shape[:2]
         detected_messages = []
-        h, w = frame.shape[:2]
+        detected_labels = set()
 
         for i in range(detections.shape[2]):
             confidence = detections[0, 0, i, 2]
@@ -99,10 +70,10 @@ def main():
                 (startX, startY, endX, endY) = box.astype("int")
 
                 # Draw green box for each detected object
-                cv2.rectangle(frame, (startX, startY), (endX, endY), (0, 255, 0), 2)
+                cv2.rectangle(img, (startX, startY), (endX, endY), (0, 255, 0), 2)
                 text = f"{label}: {confidence:.2f}"
                 y = startY - 10 if startY - 10 > 10 else startY + 10
-                cv2.putText(frame, text, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(img, text, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
                 if label in BIN_GUIDE and label not in detected_labels:
                     bin_instruction = BIN_GUIDE[label]
@@ -117,15 +88,25 @@ def main():
                     play_audio(message)  # Play audio for unknown objects
                     detected_labels.add(label)  # Add the label to the set to avoid repeats
 
-        # Display video frame and detection messages
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_placeholder.image(frame_rgb, channels="RGB")
-        detected_objects_placeholder.write("\n".join(detected_messages) if detected_messages else "No objects detected.")
+        # Display detection messages
+        st.write("\n".join(detected_messages) if detected_messages else "No objects detected.")
 
-    # Release the video feed and play goodbye message
-    video.release()
-    st.subheader("Goodbye Message")
-    play_audio("Thank you for using Midori Eco. Goodbye!")
+        return img
+
+def main():
+    st.title("♻️ Midori Eco: Your Recycling Assistant")
+    st.write(
+        "Hello, I am **Midori Eco**, your smart assistant for recycling. "
+        "Hold an item in front of the webcam and press **'Detect Object'** to find out which bin it goes in."
+    )
+    st.sidebar.header("User Guide")
+    st.sidebar.write(
+        "- **Start the webcam** to enable live detection.\n"
+        "- Click **'Detect Object'** to check an item's category.\n"
+        "- Press **'Stop Webcam'** when you're done."
+    )
+
+    webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
 
 if __name__ == "__main__":
     main()
