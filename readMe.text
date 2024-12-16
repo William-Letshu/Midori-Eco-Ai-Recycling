@@ -1,0 +1,45 @@
+Midori: AI-Powered Recycling Assistant
+Description:
+Midori is an AI-driven recycling assistant designed to promote sustainable waste management on the University of Salford campus. The application uses an interactive interface powered by Streamlit, combined with AI object recognition, to guide users in sorting waste properly. A webcam-enabled scanner and voice assistant enhance accessibility and help educate users on recycling best practices.
+
+__________________________________________________________________________________
+Features
+AI-based object recognition using the mobilenet_iter_73000.caffemodel model.
+Webcam scanner identifies recyclable items and guides bin placement.
+Voice assistant for accessible and user-friendly interaction.
+Educational feedback to improve recycling knowledge and habits.
+
+Requirements
+Python 3.x
+Required libraries and dependencies listed in requirements.txt.
+mobilenet_iter_73000.caffemodel (place in the project directory).
+
+__________________________________________________________________________________
+Setup Instructions
+1. Clone the Repository:
+2. Download or clone the project files to your local machine.
+
+Install Dependencies:
+Run the following command to install required libraries:
+pip install -r requirements.txt
+
+3. Ensure the Model File is in Place:
+Place the mobilenet_iter_73000.caffemodel file in the project directory.
+
+__________________________________________________________________________________
+
+How to Run the Project Using Streamlit
+1. Open a terminal or command prompt.
+2. Navigate to the project directory:
+cd /path/to/project
+
+3.Run the Streamlit application:
+streamlit run main.py
+
+4. The app will launch in your default web browser.
+If it doesn’t open automatically, copy the provided URL into your browser.
+
+
+
+
+
